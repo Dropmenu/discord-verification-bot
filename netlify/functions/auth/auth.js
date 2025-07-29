@@ -1,6 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 
 const {
     DISCORD_CLIENT_ID,
@@ -13,6 +13,8 @@ const {
 
 // The main Netlify Function handler
 exports.handler = async (event) => {
+    // Connect the environment using the official helper
+    connectLambda(event);
     // Route based on the path
     if (event.path.endsWith('/auth/discord')) {
         return handleDiscordAuth(event);
@@ -71,12 +73,7 @@ const handleDiscordCallback = async (event) => {
         const user = userResponse.data;
 
         // Store user data in Netlify Blobs
-        // Explicitly configure the store to bypass automatic configuration issues
-        const store = getStore({
-            name: 'verified-users',
-            siteID: process.env.NETLIFY_SITE_ID,
-            token: process.env.NETLIFY_API_TOKEN
-        });
+        const store = getStore('verified-users');
         const userData = {
             id: user.id,
             username: user.username,
