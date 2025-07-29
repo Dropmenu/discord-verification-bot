@@ -3,8 +3,15 @@ const express = require('express');
 const serverless = require('serverless-http');
 const axios = require('axios');
 const { getStore } = require('@netlify/blobs');
+let store;
 
 const app = express();
+
+// Middleware to make the blob store available in requests
+app.use((req, res, next) => {
+    req.store = store;
+    next();
+});
 const router = express.Router();
 
 const {
@@ -72,12 +79,7 @@ router.get('/auth/discord/callback', async (req, res) => {
             verified: user.verified,
             timestamp: new Date().toISOString(),
         };
-        const store = getStore({
-            name: 'verified-users',
-            siteID: NETLIFY_SITE_ID,
-            token: NETLIFY_API_TOKEN
-        });
-        await store.set(user.id, JSON.stringify(userData));
+        await req.store.set(user.id, JSON.stringify(userData));
 
         // Assign verified role to the user
         const guildMemberUrl = `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${user.id}/roles/${VERIFIED_ROLE_ID}`;
@@ -99,4 +101,13 @@ router.get('/auth/discord/callback', async (req, res) => {
 
 app.use('/', router);
 
-module.exports.handler = serverless(app);
+const handler = serverless(app);
+
+// The new handler that initializes the store before running the app
+module.exports.handler = async (event, context) => {
+    // Initialize the store using the function context
+    store = getStore('verified-users');
+    
+    // Pass the event to the serverless handler
+    return handler(event, context);
+};
