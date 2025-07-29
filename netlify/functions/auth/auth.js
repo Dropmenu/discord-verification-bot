@@ -13,7 +13,9 @@ const {
     DISCORD_REDIRECT_URI,
     DISCORD_BOT_TOKEN,
     GUILD_ID,
-    VERIFIED_ROLE_ID
+    VERIFIED_ROLE_ID,
+    NETLIFY_SITE_ID,
+    NETLIFY_API_TOKEN
 } = process.env;
 
 // 1. Redirect to Discord OAuth2
@@ -70,7 +72,11 @@ router.get('/auth/discord/callback', async (req, res) => {
             verified: user.verified,
             timestamp: new Date().toISOString(),
         };
-        const store = getStore('verified-users');
+        const store = getStore({
+            name: 'verified-users',
+            siteID: NETLIFY_SITE_ID,
+            token: NETLIFY_API_TOKEN
+        });
         await store.set(user.id, JSON.stringify(userData));
 
         // Assign verified role to the user
@@ -86,7 +92,7 @@ router.get('/auth/discord/callback', async (req, res) => {
         res.redirect('/success');
 
     } catch (error) {
-        console.error('Error during Discord OAuth callback:', error.response ? error.response.data : error.message);
+        console.error('Error during Discord OAuth callback:', error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
         res.status(500).send('An error occurred during verification.');
     }
 });
