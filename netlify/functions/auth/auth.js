@@ -71,7 +71,12 @@ const handleDiscordCallback = async (event) => {
         const user = userResponse.data;
 
         // Store user data in Netlify Blobs
-        const store = getStore('verified-users');
+        // Explicitly configure the store to bypass automatic configuration issues
+        const store = getStore({
+            name: 'verified-users',
+            siteID: process.env.NETLIFY_SITE_ID,
+            token: process.env.NETLIFY_API_TOKEN
+        });
         const userData = {
             id: user.id,
             username: user.username,
