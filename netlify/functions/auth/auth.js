@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const serverless = require('serverless-http');
 const axios = require('axios');
-const { getBlob, setBlob } = require('@netlify/blobs');
+const { getStore } = require('@netlify/blobs');
 
 const app = express();
 const router = express.Router();
@@ -70,7 +70,8 @@ router.get('/auth/discord/callback', async (req, res) => {
             verified: user.verified,
             timestamp: new Date().toISOString(),
         };
-        await setBlob(`user-${user.id}`, userData);
+        const store = getStore('verified-users');
+        await store.set(user.id, JSON.stringify(userData));
 
         // Assign verified role to the user
         const guildMemberUrl = `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${user.id}/roles/${VERIFIED_ROLE_ID}`;
