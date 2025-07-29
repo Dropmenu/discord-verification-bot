@@ -1,0 +1,19 @@
+[build]
+  command = "npm install"
+  functions = "netlify/functions"
+  publish = "frontend"
+
+[[redirects]]
+  from = "/auth/discord"
+  to = "/.netlify/functions/auth"
+  status = 200
+
+[[redirects]]
+  from = "/auth/discord/callback"
+  to = "/.netlify/functions/auth"
+  status = 200
+
+[[redirects]]
+  from = "/success"
+  to = "/success.html"
+  status = 200
