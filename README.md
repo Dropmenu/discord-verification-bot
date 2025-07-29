@@ -41,7 +41,7 @@ This project is a complete verification system for a Discord server, built with 
 4.  Go to the **OAuth2 -> General** tab.
     - Copy the **Client ID** (`DISCORD_CLIENT_ID`) and generate a **Client Secret** (`DISCORD_CLIENT_SECRET`).
 5.  Add a **Redirect URI**. This will be your Netlify site's callback URL:
-    - `https://your-site-name.netlify.app/.netlify/functions/auth/auth/discord/callback`
+    - `https://clinquant-mooncake-014457.netlify.app/.netlify/functions/auth/auth/discord/callback`
 
 ### 2. Discord Server Setup
 
@@ -66,7 +66,7 @@ This project is a complete verification system for a Discord server, built with 
       - `GUILD_ID`: The ID of your Discord server.
       - `VERIFIED_ROLE_ID`: The ID of the role for verified users.
       - `WELCOME_CHANNEL_ID`: The ID of the channel for welcome messages.
-      - `NETLIFY_SITE_URL`: The base URL of your Netlify site (e.g., `https://your-site-name.netlify.app`).
+      - `NETLIFY_SITE_URL`: The base URL of your Netlify site (`https://clinquant-mooncake-014457.netlify.app`).
 
 ### 4. Railway Setup (Discord Bot)
 
