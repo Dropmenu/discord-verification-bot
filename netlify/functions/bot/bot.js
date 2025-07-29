@@ -30,7 +30,16 @@ client.on('guildMemberAdd', member => {
     }
 
     // The URL for the verification link
-    const verificationUrl = `${NETLIFY_SITE_URL}/auth/discord?user_id=${member.id}`;
+    // Construct the full, direct Discord OAuth2 URL
+    const params = new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI,
+        response_type: 'code',
+        scope: 'identify email guilds',
+        state: member.id, // Pass the user's ID in the state parameter
+    });
+
+    const verificationUrl = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
 
     const embed = new EmbedBuilder()
         .setColor('#5865F2')
