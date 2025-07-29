@@ -90,6 +90,6 @@ router.get('/auth/discord/callback', async (req, res) => {
     }
 });
 
-app.use('/.netlify/functions/auth', router);
+app.use('/', router);
 
 module.exports.handler = serverless(app);
