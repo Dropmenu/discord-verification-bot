@@ -1,18 +1,6 @@
 require('dotenv').config();
-const express = require('express');
-const serverless = require('serverless-http');
 const axios = require('axios');
 const { getStore } = require('@netlify/blobs');
-let store;
-
-const app = express();
-
-// Middleware to make the blob store available in requests
-app.use((req, res, next) => {
-    req.store = store;
-    next();
-});
-const router = express.Router();
 
 const {
     DISCORD_CLIENT_ID,
@@ -20,30 +8,48 @@ const {
     DISCORD_REDIRECT_URI,
     DISCORD_BOT_TOKEN,
     GUILD_ID,
-    VERIFIED_ROLE_ID,
-    NETLIFY_SITE_ID,
-    NETLIFY_API_TOKEN
+    VERIFIED_ROLE_ID
 } = process.env;
 
+// The main Netlify Function handler
+exports.handler = async (event) => {
+    // Route based on the path
+    if (event.path.endsWith('/auth/discord')) {
+        return handleDiscordAuth(event);
+    } else if (event.path.endsWith('/auth/discord/callback')) {
+        return handleDiscordCallback(event);
+    }
+
+    return {
+        statusCode: 404,
+        body: 'Not Found',
+    };
+};
+
 // 1. Redirect to Discord OAuth2
-router.get('/auth/discord', (req, res) => {
-    const state = req.query.user_id; // Pass user_id as state
+const handleDiscordAuth = (event) => {
+    const state = event.queryStringParameters.user_id;
     const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT_URI)}&response_type=code&scope=identify%20email&state=${state}`;
-    res.redirect(url);
-});
+
+    return {
+        statusCode: 302,
+        headers: {
+            Location: url,
+        },
+    };
+};
 
 // 2. OAuth2 Callback
-router.get('/auth/discord/callback', async (req, res) => {
-    const { code, state } = req.query;
-    const userId = state;
+const handleDiscordCallback = async (event) => {
+    const { code, state } = event.queryStringParameters;
 
     if (!code) {
-        return res.status(400).send('Authorization code is missing.');
+        return { statusCode: 400, body: 'Authorization code is missing.' };
     }
 
     try {
         // Exchange code for access token
-        const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', 
+        const tokenResponse = await axios.post('https://discord.com/api/oauth2/token',
             new URLSearchParams({
                 client_id: DISCORD_CLIENT_ID,
                 client_secret: DISCORD_CLIENT_SECRET,
@@ -52,62 +58,48 @@ router.get('/auth/discord/callback', async (req, res) => {
                 redirect_uri: DISCORD_REDIRECT_URI,
                 scope: 'identify email',
             }), {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         });
 
         const accessToken = tokenResponse.data.access_token;
 
-        // Fetch user data from Discord
+        // Fetch user data
         const userResponse = await axios.get('https://discord.com/api/users/@me', {
-            headers: {
-                authorization: `Bearer ${accessToken}`,
-            },
+            headers: { authorization: `Bearer ${accessToken}` },
         });
 
         const user = userResponse.data;
 
         // Store user data in Netlify Blobs
+        const store = getStore('verified-users');
         const userData = {
             id: user.id,
             username: user.username,
             discriminator: user.discriminator,
-            avatar: user.avatar,
             email: user.email,
-            locale: user.locale,
-            verified: user.verified,
             timestamp: new Date().toISOString(),
         };
-        await req.store.set(user.id, JSON.stringify(userData));
+        await store.set(user.id, JSON.stringify(userData));
 
-        // Assign verified role to the user
+        // Assign verified role
         const guildMemberUrl = `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${user.id}/roles/${VERIFIED_ROLE_ID}`;
         await axios.put(guildMemberUrl, {}, {
-            headers: {
-                'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` },
         });
 
         // Redirect to success page
-        res.redirect('/success');
+        return {
+            statusCode: 302,
+            headers: {
+                Location: '/success',
+            },
+        };
 
     } catch (error) {
         console.error('Error during Discord OAuth callback:', error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
-        res.status(500).send('An error occurred during verification.');
+        return {
+            statusCode: 500,
+            body: 'An error occurred during verification.',
+        };
     }
-});
-
-app.use('/', router);
-
-const handler = serverless(app);
-
-// The new handler that initializes the store before running the app
-module.exports.handler = async (event, context) => {
-    // Initialize the store using the function context
-    store = getStore('verified-users');
-    
-    // Pass the event to the serverless handler
-    return handler(event, context);
 };
