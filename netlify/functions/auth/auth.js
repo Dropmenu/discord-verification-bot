@@ -96,7 +96,7 @@ const handleDiscordCallback = async (event) => {
         return {
             statusCode: 302,
             headers: {
-                Location: `discord://-/channels/${process.env.GUILD_ID}`,
+                Location: `https://discord.com/channels/${process.env.GUILD_ID}`,
             },
         };
 
